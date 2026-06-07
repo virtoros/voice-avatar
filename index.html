@@ -7,70 +7,120 @@
   <style>
     body, html {
       margin: 0; padding: 0; width: 100%; height: 100%;
-      background: #0f172a; font-family: system-ui, sans-serif; overflow: hidden;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      font-family: system-ui, sans-serif; overflow: hidden;
+      color: #f8f9fa;
     }
     #app-container {
       display: flex; flex-direction: column; justify-content: center;
       align-items: center; height: 100vh; width: 100vw;
+      perspective: 800px; /* Forces 3D depth rendering */
     }
+    
+    /* 3D Hologram Container Animation */
+    #hologram-wrapper {
+      width: 280px; height: 280px; margin-bottom: 30px;
+      transform-style: preserve-3d;
+      animation: ambientDrift 8s ease-in-out infinite alternate;
+      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
+    }
+    
+    @keyframes ambientDrift {
+      0% { transform: rotateY(-12deg) rotateX(2deg) translateY(-5px); }
+      100% { transform: rotateY(12deg) rotateX(-2deg) translateY(5px); }
+    }
+
     #avatar-svg {
-      max-width: 250px; max-height: 250px; margin-bottom: 24px;
-      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+      width: 100%; height: 100%;
     }
+
+    /* Core UI Elements */
     #ui-panel {
-      width: 90%; max-width: 420px; background: rgba(30, 41, 59, 0.85);
-      backdrop-filter: blur(8px); padding: 20px; border-radius: 16px; 
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05);
-      text-align: center; box-sizing: border-box;
+      width: 90%; max-width: 420px; background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(12px); padding: 24px; border-radius: 16px; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-top: 1px solid rgba(56, 189, 248, 0.3);
+      text-align: center; box-sizing: border-box; z-index: 10;
     }
     #status { 
       color: #94a3b8; font-size: 11px; text-transform: uppercase; 
-      letter-spacing: 1px; margin-bottom: 16px; font-weight: bold; 
+      letter-spacing: 1.5px; margin-bottom: 16px; font-weight: bold; 
     }
     #response-box { 
-      color: #f8f9fa; font-size: 14px; max-height: 90px; overflow-y: auto; 
-      margin-bottom: 16px; text-align: left; background: #1e293b; 
-      padding: 10px; border-radius: 8px; border: 1px solid #334155;
+      color: #e2e8f0; font-size: 14px; max-height: 100px; overflow-y: auto; 
+      margin-bottom: 16px; text-align: left; background: rgba(0,0,0,0.3); 
+      padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+      line-height: 1.5; font-weight: 300;
     }
     button {
-      background: #2563eb; color: white; border: none; padding: 14px;
-      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%;
-      transition: background 0.2s;
+      background: linear-gradient(135deg, #3b82f6, #2563eb); 
+      color: white; border: none; padding: 14px;
+      border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; width: 100%;
+      transition: all 0.2s; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }
-    button:hover { background: #1d4ed8; }
-    button:disabled { background: #475569; cursor: not-allowed; }
+    button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); }
+    button:disabled { background: #475569; cursor: not-allowed; box-shadow: none; transform: none; }
     input { 
-      width: 100%; padding: 10px; margin-bottom: 12px; background: #1e293b; 
+      width: 100%; padding: 12px; margin-bottom: 16px; background: rgba(0,0,0,0.4); 
       border: 1px solid #334155; border-radius: 8px; color: white; 
       box-sizing: border-box; font-size: 13px; text-align: center;
+      transition: border-color 0.2s;
     }
+    input:focus { outline: none; border-color: #38bdf8; }
   </style>
 </head>
 <body>
 
 <div id="app-container">
-  <svg id="avatar-svg" viewBox="0 0 200 200">
-    <path d="M100 20 L155 45 L170 100 L150 155 L100 185 L50 155 L30 100 L45 45 Z" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.4" />
-    <path d="M100 20 L100 70 M45 45 L100 70 L155 45 M30 100 L75 90 L100 70 L125 90 L170 100 M50 155 L75 130 L100 110 L125 130 L150 155" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.3" />
-    
-    <circle cx="75" cy="90" r="5" fill="none" stroke="#38bdf8" stroke-width="2" />
-    <circle cx="75" cy="90" r="1.5" fill="#38bdf8" />
-    <circle cx="125" cy="90" r="5" fill="none" stroke="#38bdf8" stroke-width="2" />
-    <circle cx="125" cy="90" r="1.5" fill="#38bdf8" />
-    
-    <path id="jaw-mesh" d="M75 130 L100 135 L125 130 L100 145 Z" fill="none" stroke="#38bdf8" stroke-width="2" />
-  </svg>
+  
+  <div id="hologram-wrapper">
+    <svg id="avatar-svg" viewBox="0 0 200 200">
+      <defs>
+        <linearGradient id="mesh-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.8"/>
+          <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#0284c7" stop-opacity="0.2"/>
+        </linearGradient>
+      </defs>
+
+      <path d="M100 15 L145 30 L175 75 L165 130 L135 170 L100 190 L65 170 L35 130 L25 75 L55 30 Z" 
+            fill="none" stroke="url(#mesh-glow)" stroke-width="1" stroke-dasharray="2,2" opacity="0.5" />
+      
+      <path d="M100 15 L100 45 M55 30 L80 40 L100 45 L120 40 L145 30 
+               M25 75 L60 70 L100 75 L140 70 L175 75
+               M60 70 L75 95 L100 100 L125 95 L140 70
+               M35 130 L60 115 L75 95 M165 130 L140 115 L125 95
+               M100 75 L100 120 L85 130 L100 135 L115 130 L100 120" 
+            fill="none" stroke="#38bdf8" stroke-width="1.2" opacity="0.75" />
+            
+      <g stroke="#7dd3fc" stroke-width="1.5">
+        <polygon points="60,85 75,80 90,85 75,90" fill="rgba(56,189,248,0.2)" />
+        <circle cx="75" cy="85" r="2" fill="#bae6fd" />
+        <polygon points="110,85 125,80 140,85 125,90" fill="rgba(56,189,248,0.2)" />
+        <circle cx="125" cy="85" r="2" fill="#bae6fd" />
+      </g>
+      
+      <path d="M60 115 L80 135 L100 135 L120 135 L140 115" fill="none" stroke="#0ea5e9" stroke-width="1" opacity="0.6" />
+
+      <path id="jaw-mesh" d="M65 150 L85 140 L100 145 L115 140 L135 150 L115 170 L100 180 L85 170 Z" 
+            fill="rgba(2,132,199,0.05)" stroke="#38bdf8" stroke-width="1.5" />
+            
+      <path id="inner-mouth" d="M80 145 L100 150 L120 145" fill="none" stroke="#7dd3fc" stroke-width="0.8" opacity="0.8" />
+    </svg>
+  </div>
 
   <div id="ui-panel">
-    <input type="password" id="api-key" placeholder="Paste Gemini API Key Here">
-    <div id="status">System Disconnected</div>
-    <div id="response-box">Tap the button below to speak...</div>
-    <button id="mic-btn">Tap to Talk to Avatar</button>
+    <input type="password" id="api-key" placeholder="Enter Gemini API Key">
+    <div id="status">System Standby</div>
+    <div id="response-box">Tap the button below to initialize the audio stream...</div>
+    <button id="mic-btn">Initiate Neural Link</button>
   </div>
 </div>
 
 <script>
   const jawMesh = document.getElementById('jaw-mesh');
+  const innerMouth = document.getElementById('inner-mouth');
   const micBtn = document.getElementById('mic-btn');
   const status = document.getElementById('status');
   const responseBox = document.getElementById('response-box');
@@ -87,19 +137,20 @@
     voiceRecognizer.lang = 'en-US';
 
     voiceRecognizer.onstart = () => { 
-      status.textContent = "Listening to your voice..."; 
+      status.textContent = "Awaiting Audio Input..."; 
       status.style.color = "#38bdf8";
     };
     
     voiceRecognizer.onerror = () => { 
-      status.textContent = "Voice collection failed."; 
+      status.textContent = "Audio Pipeline Failed"; 
       status.style.color = "#ef4444";
       micBtn.disabled = false; 
     };
     
     voiceRecognizer.onresult = async (event) => {
       const userPrompt = event.results[0][0].transcript;
-      status.textContent = "Sending stream to Google AI...";
+      status.textContent = "Processing via Gemini...";
+      status.style.color = "#fcd34d";
       await streamGeminiPayload(userPrompt);
     };
   } else {
@@ -110,22 +161,40 @@
   function engageMouthMovement() {
     clearInterval(lipsyncTimer);
     lipsyncTimer = setInterval(() => {
-      const displacement = Math.floor(Math.random() * 25);
-      const targetY1 = (135 + displacement).toFixed(1);
-      const targetY2 = (145 + displacement * 1.5).toFixed(1);
-      jawMesh.setAttribute('d', `M75 130 L100 ${targetY1} L125 130 L100 ${targetY2} Z`);
-    }, 85);
+      // Generate randomized but organic feeling displacement
+      const openAmount = Math.random() * 20; 
+      const widthFlex = Math.random() * 4;
+      
+      const lipY = (145 + openAmount * 0.4).toFixed(1);
+      const chinY = (180 + openAmount).toFixed(1);
+      const jawY = (170 + openAmount * 0.7).toFixed(1);
+      
+      const leftJawX = (85 - widthFlex).toFixed(1);
+      const rightJawX = (115 + widthFlex).toFixed(1);
+
+      // Morph the main jaw
+      jawMesh.setAttribute('d', 
+        `M65 150 L85 140 L100 ${lipY} L115 140 L135 150 L${rightJawX} ${jawY} L100 ${chinY} L${leftJawX} ${jawY} Z`
+      );
+      
+      // Morph the inner mouth line to give depth
+      const innerY = (150 + openAmount * 0.6).toFixed(1);
+      innerMouth.setAttribute('d', `M80 145 L100 ${innerY} L120 145`);
+      
+    }, 70); // Slightly faster interval for snappier, robotic lip sync
   }
 
   function settleMouthPosition() {
     clearInterval(lipsyncTimer);
-    jawMesh.setAttribute('d', 'M75 130 L100 135 L125 130 L100 145 Z');
+    // Return vertices to exact resting state
+    jawMesh.setAttribute('d', 'M65 150 L85 140 L100 145 L115 140 L135 150 L115 170 L100 180 L85 170 Z');
+    innerMouth.setAttribute('d', 'M80 145 L100 150 L120 145');
   }
 
   async function streamGeminiPayload(prompt) {
     const accessKey = apiKeyInput.value.trim();
     if (!accessKey) { 
-      status.textContent = "Error: Key Box Empty"; 
+      status.textContent = "Error: Authentication Key Missing"; 
       status.style.color = "#ef4444";
       micBtn.disabled = false; 
       return; 
@@ -145,7 +214,7 @@
       processTextToVocalHardware(rawText);
     } catch (err) {
       console.error(err);
-      status.textContent = "Connection Terminated";
+      status.textContent = "Network Uplink Terminated";
       status.style.color = "#ef4444";
       micBtn.disabled = false;
     }
@@ -155,6 +224,14 @@
     const sanitizedText = text.replace(/[*#`_\-]/g, '');
     const speechStream = new SpeechSynthesisUtterance(sanitizedText);
     
+    // Attempt to select a tech-sounding or default English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) || voices[0];
+    if (preferredVoice) speechStream.voice = preferredVoice;
+    
+    speechStream.rate = 1.05; // Slightly faster for a crisp, AI-like cadence
+    speechStream.pitch = 0.9;
+
     speechStream.onstart = () => {
       status.textContent = "Avatar Voice Active";
       status.style.color = "#10b981";
@@ -162,14 +239,14 @@
     };
     
     speechStream.onend = () => {
-      status.textContent = "System Disconnected";
+      status.textContent = "System Standby";
       status.style.color = "#94a3b8";
       micBtn.disabled = false;
       settleMouthPosition();
     };
 
     speechStream.onerror = () => {
-      status.textContent = "System Disconnected";
+      status.textContent = "System Standby";
       status.style.color = "#94a3b8";
       micBtn.disabled = false;
       settleMouthPosition();
@@ -181,6 +258,10 @@
   micBtn.addEventListener('click', () => {
     if (!voiceRecognizer) return;
     micBtn.disabled = true;
+    
+    // Ensures voices are loaded in browser memory before initiating
+    window.speechSynthesis.getVoices(); 
+    
     voiceRecognizer.start();
   });
 </script>
