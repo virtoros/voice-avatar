@@ -3,265 +3,696 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Local Automated Wireframe Avatar</title>
+  <title>Holographic Wireframe Avatar</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; }
+
     body, html {
       margin: 0; padding: 0; width: 100%; height: 100%;
-      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-      font-family: system-ui, sans-serif; overflow: hidden;
-      color: #f8f9fa;
+      background: radial-gradient(ellipse at 50% 40%, #0c1a2e 0%, #060d18 60%, #020709 100%);
+      font-family: 'Exo 2', sans-serif;
+      overflow: hidden;
+      color: #e2e8f0;
     }
+
+    /* Subtle scanline overlay */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none; z-index: 100;
+    }
+
     #app-container {
-      display: flex; flex-direction: column; justify-content: center;
-      align-items: center; height: 100vh; width: 100vw;
-      perspective: 800px; /* Forces 3D depth rendering */
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      height: 100vh; width: 100vw;
+      perspective: 900px;
+      gap: 0;
     }
-    
-    /* 3D Hologram Container Animation */
+
+    /* 3D hologram wrapper */
     #hologram-wrapper {
-      width: 280px; height: 280px; margin-bottom: 30px;
+      width: 300px; height: 300px;
+      position: relative;
       transform-style: preserve-3d;
-      animation: ambientDrift 8s ease-in-out infinite alternate;
-      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
+      animation: ambientDrift 9s ease-in-out infinite alternate;
+      filter: drop-shadow(0 0 18px rgba(56,189,248,0.35)) drop-shadow(0 0 40px rgba(14,165,233,0.15));
     }
-    
+
     @keyframes ambientDrift {
-      0% { transform: rotateY(-12deg) rotateX(2deg) translateY(-5px); }
-      100% { transform: rotateY(12deg) rotateX(-2deg) translateY(5px); }
+      0%   { transform: rotateY(-10deg) rotateX(3deg) translateY(-6px); }
+      100% { transform: rotateY(10deg)  rotateX(-3deg) translateY(6px); }
     }
 
-    #avatar-svg {
-      width: 100%; height: 100%;
+    /* Rotating base ring beneath face */
+    #base-ring {
+      position: absolute;
+      bottom: -18px; left: 50%;
+      transform: translateX(-50%);
+      width: 180px; height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(56,189,248,0.25);
+      background: radial-gradient(ellipse, rgba(56,189,248,0.08) 0%, transparent 70%);
+      animation: ringPulse 3s ease-in-out infinite alternate;
+    }
+    @keyframes ringPulse {
+      0%   { opacity: 0.4; transform: translateX(-50%) scaleX(0.85); }
+      100% { opacity: 0.9; transform: translateX(-50%) scaleX(1.1); }
     }
 
-    /* Core UI Elements */
+    #avatar-svg { width: 100%; height: 100%; }
+
+    /* Scan line that sweeps the face */
+    #scan-line {
+      animation: scanSweep 4s ease-in-out infinite;
+    }
+    @keyframes scanSweep {
+      0%   { transform: translateY(-90px); opacity: 0; }
+      10%  { opacity: 0.6; }
+      80%  { opacity: 0.3; }
+      100% { transform: translateY(90px); opacity: 0; }
+    }
+
+    /* Eye blink */
+    #eye-lid-l, #eye-lid-r {
+      animation: blink 6s ease-in-out infinite;
+      transform-origin: center;
+    }
+    @keyframes blink {
+      0%, 90%, 100% { transform: scaleY(1); }
+      94%           { transform: scaleY(0.08); }
+    }
+
+    /* Pupil idle glow pulse */
+    .pupil-glow {
+      animation: pupilPulse 3s ease-in-out infinite alternate;
+    }
+    @keyframes pupilPulse {
+      0%   { opacity: 0.7; r: 2.5; }
+      100% { opacity: 1.0; r: 3.2; }
+    }
+
+    /* UI Panel */
     #ui-panel {
-      width: 90%; max-width: 420px; background: rgba(15, 23, 42, 0.7);
-      backdrop-filter: blur(12px); padding: 24px; border-radius: 16px; 
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6); 
-      border: 1px solid rgba(56, 189, 248, 0.15);
-      border-top: 1px solid rgba(56, 189, 248, 0.3);
-      text-align: center; box-sizing: border-box; z-index: 10;
+      width: 90%; max-width: 400px;
+      background: rgba(8, 18, 32, 0.82);
+      backdrop-filter: blur(16px);
+      padding: 20px 24px 22px;
+      border-radius: 12px;
+      border: 1px solid rgba(56,189,248,0.12);
+      border-top: 1px solid rgba(56,189,248,0.28);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(56,189,248,0.08);
+      text-align: center;
+      position: relative;
+      margin-top: 4px;
     }
-    #status { 
-      color: #94a3b8; font-size: 11px; text-transform: uppercase; 
-      letter-spacing: 1.5px; margin-bottom: 16px; font-weight: bold; 
+    #ui-panel::before {
+      content: '';
+      position: absolute; top: 0; left: 20px; right: 20px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(56,189,248,0.5), transparent);
     }
-    #response-box { 
-      color: #e2e8f0; font-size: 14px; max-height: 100px; overflow-y: auto; 
-      margin-bottom: 16px; text-align: left; background: rgba(0,0,0,0.3); 
-      padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
-      line-height: 1.5; font-weight: 300;
+
+    #status {
+      font-family: 'Share Tech Mono', monospace;
+      color: #64748b; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 2px;
+      margin-bottom: 12px;
+      transition: color 0.4s;
     }
+
+    #response-box {
+      font-family: 'Exo 2', sans-serif;
+      font-weight: 300;
+      color: #cbd5e1; font-size: 13px;
+      max-height: 88px; overflow-y: auto;
+      margin-bottom: 16px;
+      text-align: left;
+      background: rgba(0,0,0,0.35);
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.04);
+      line-height: 1.55;
+    }
+
     button {
-      background: linear-gradient(135deg, #3b82f6, #2563eb); 
-      color: white; border: none; padding: 14px;
-      border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; width: 100%;
-      transition: all 0.2s; text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      background: linear-gradient(135deg, #0369a1, #0284c7, #0ea5e9);
+      color: #e0f2fe;
+      border: none; border-top: 1px solid rgba(186,230,253,0.25);
+      padding: 13px;
+      border-radius: 7px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; letter-spacing: 1px;
+      cursor: pointer; width: 100%;
+      transition: all 0.2s;
+      text-transform: uppercase;
     }
-    button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); }
-    button:disabled { background: #475569; cursor: not-allowed; box-shadow: none; transform: none; }
-    input { 
-      width: 100%; padding: 12px; margin-bottom: 16px; background: rgba(0,0,0,0.4); 
-      border: 1px solid #334155; border-radius: 8px; color: white; 
-      box-sizing: border-box; font-size: 13px; text-align: center;
-      transition: border-color 0.2s;
+    button:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0284c7, #0ea5e9, #38bdf8);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(14,165,233,0.4);
     }
-    input:focus { outline: none; border-color: #38bdf8; }
+    button:disabled { background: #1e293b; color: #475569; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    input {
+      width: 100%; padding: 11px 12px;
+      margin-bottom: 14px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(51,65,85,0.8);
+      border-radius: 6px; color: #94a3b8;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px; text-align: center;
+      letter-spacing: 1px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: rgba(56,189,248,0.5);
+      color: #e2e8f0;
+    }
+    input::placeholder { color: #334155; letter-spacing: 1px; }
   </style>
 </head>
 <body>
 
 <div id="app-container">
-  
   <div id="hologram-wrapper">
-    <svg id="avatar-svg" viewBox="0 0 200 200">
+    <div id="base-ring"></div>
+
+    <svg id="avatar-svg" viewBox="0 0 200 210">
       <defs>
-        <linearGradient id="mesh-glow" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#7dd3fc" stop-opacity="0.8"/>
-          <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.5"/>
-          <stop offset="100%" stop-color="#0284c7" stop-opacity="0.2"/>
+        <!-- Main mesh gradient -->
+        <linearGradient id="mg" x1="20%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%"   stop-color="#7dd3fc" stop-opacity="0.95"/>
+          <stop offset="45%"  stop-color="#38bdf8" stop-opacity="0.7"/>
+          <stop offset="100%" stop-color="#0284c7" stop-opacity="0.4"/>
         </linearGradient>
+        <!-- Scan line gradient -->
+        <linearGradient id="slg" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#38bdf8" stop-opacity="0"/>
+          <stop offset="20%"  stop-color="#38bdf8" stop-opacity="0.6"/>
+          <stop offset="50%"  stop-color="#bae6fd" stop-opacity="0.9"/>
+          <stop offset="80%"  stop-color="#38bdf8" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+        </linearGradient>
+        <!-- Ambient face glow -->
+        <radialGradient id="fg" cx="50%" cy="44%" r="52%">
+          <stop offset="0%"   stop-color="#0ea5e9" stop-opacity="0.12"/>
+          <stop offset="70%"  stop-color="#0284c7" stop-opacity="0.06"/>
+          <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+        </radialGradient>
+        <!-- Eye socket glow -->
+        <radialGradient id="eyegl" cx="50%" cy="50%" r="50%">
+          <stop offset="0%"   stop-color="#38bdf8" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+        </radialGradient>
+        <!-- Iris gradient -->
+        <radialGradient id="irisg" cx="40%" cy="35%" r="60%">
+          <stop offset="0%"   stop-color="#bae6fd" stop-opacity="0.9"/>
+          <stop offset="55%"  stop-color="#38bdf8" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#0369a1" stop-opacity="0.3"/>
+        </radialGradient>
+        <!-- Clip for scan line -->
+        <clipPath id="faceClip">
+          <ellipse cx="100" cy="95" rx="72" ry="88"/>
+        </clipPath>
       </defs>
 
-      <path d="M100 15 L145 30 L175 75 L165 130 L135 170 L100 190 L65 170 L35 130 L25 75 L55 30 Z" 
-            fill="none" stroke="url(#mesh-glow)" stroke-width="1" stroke-dasharray="2,2" opacity="0.5" />
-      
-      <path d="M100 15 L100 45 M55 30 L80 40 L100 45 L120 40 L145 30 
-               M25 75 L60 70 L100 75 L140 70 L175 75
-               M60 70 L75 95 L100 100 L125 95 L140 70
-               M35 130 L60 115 L75 95 M165 130 L140 115 L125 95
-               M100 75 L100 120 L85 130 L100 135 L115 130 L100 120" 
-            fill="none" stroke="#38bdf8" stroke-width="1.2" opacity="0.75" />
-            
-      <g stroke="#7dd3fc" stroke-width="1.5">
-        <polygon points="60,85 75,80 90,85 75,90" fill="rgba(56,189,248,0.2)" />
-        <circle cx="75" cy="85" r="2" fill="#bae6fd" />
-        <polygon points="110,85 125,80 140,85 125,90" fill="rgba(56,189,248,0.2)" />
-        <circle cx="125" cy="85" r="2" fill="#bae6fd" />
-      </g>
-      
-      <path d="M60 115 L80 135 L100 135 L120 135 L140 115" fill="none" stroke="#0ea5e9" stroke-width="1" opacity="0.6" />
+      <!-- ===== AMBIENT FACE GLOW ===== -->
+      <ellipse cx="100" cy="95" rx="72" ry="88" fill="url(#fg)"/>
 
-      <path id="jaw-mesh" d="M65 150 L85 140 L100 145 L115 140 L135 150 L115 170 L100 180 L85 170 Z" 
-            fill="rgba(2,132,199,0.05)" stroke="#38bdf8" stroke-width="1.5" />
-            
-      <path id="inner-mouth" d="M80 145 L100 150 L120 145" fill="none" stroke="#7dd3fc" stroke-width="0.8" opacity="0.8" />
+      <!-- ===== OUTER HEAD SILHOUETTE ===== -->
+      <!-- Main outline -->
+      <path d="M100 9
+               C120 9,148 18,162 38
+               C176 58,174 85,170 105
+               C165 126,154 142,144 154
+               C132 166,116 173,100 175
+               C84 173,68 166,56 154
+               C46 142,35 126,30 105
+               C26 85,24 58,38 38
+               C52 18,80 9,100 9 Z"
+            fill="none" stroke="url(#mg)" stroke-width="1.2" opacity="0.55"/>
+      <!-- Outer halo ring (dashed) -->
+      <path d="M100 5
+               C122 5,152 15,167 36
+               C182 58,180 88,176 110
+               C171 132,158 149,147 161
+               C134 174,117 181,100 183
+               C83 181,66 174,53 161
+               C42 149,29 132,24 110
+               C20 88,18 58,33 36
+               C48 15,78 5,100 5 Z"
+            fill="none" stroke="#0ea5e9" stroke-width="0.5" stroke-dasharray="4,5" opacity="0.25"/>
+
+      <!-- ===== FOREHEAD HORIZONTAL CONTOUR RINGS ===== -->
+      <path d="M76 17 C84 13, 93 11, 100 11 C107 11, 116 13, 124 17"
+            fill="none" stroke="#38bdf8" stroke-width="0.7" opacity="0.45"/>
+      <path d="M62 30 C73 22, 87 18, 100 18 C113 18, 127 22, 138 30"
+            fill="none" stroke="#38bdf8" stroke-width="0.75" opacity="0.5"/>
+      <path d="M48 46 C62 35, 80 29, 100 28 C120 29, 138 35, 152 46"
+            fill="none" stroke="#38bdf8" stroke-width="0.8" opacity="0.55"/>
+      <!-- Brow-level ring (splits around eye sockets) -->
+      <path d="M36 63 C48 53, 64 47, 78 49 C82 50, 85 52, 87 55 M113 55 C115 52, 118 50, 122 49 C136 47, 152 53, 164 63"
+            fill="none" stroke="#7dd3fc" stroke-width="1.1" opacity="0.7"/>
+
+      <!-- ===== VERTICAL MERIDIAN LINES ===== -->
+      <!-- Center (dashed) -->
+      <path d="M100 11 C100 35, 100 65, 100 100 C100 125, 100 145, 100 175"
+            fill="none" stroke="#38bdf8" stroke-width="0.6" stroke-dasharray="1.5,4" opacity="0.3"/>
+      <!-- Inner pair -->
+      <path d="M89 17 C87 40, 85 68, 87 94 C89 114, 89 133, 87 157"
+            fill="none" stroke="#38bdf8" stroke-width="0.55" opacity="0.28"/>
+      <path d="M111 17 C113 40, 115 68, 113 94 C111 114, 111 133, 113 157"
+            fill="none" stroke="#38bdf8" stroke-width="0.55" opacity="0.28"/>
+      <!-- Mid pair -->
+      <path d="M73 25 C68 48, 62 72, 60 97 C58 118, 60 138, 68 160"
+            fill="none" stroke="#38bdf8" stroke-width="0.5" opacity="0.22"/>
+      <path d="M127 25 C132 48, 138 72, 140 97 C142 118, 140 138, 132 160"
+            fill="none" stroke="#38bdf8" stroke-width="0.5" opacity="0.22"/>
+      <!-- Outer pair -->
+      <path d="M50 44 C43 65, 36 90, 34 112 C32 132, 38 150, 52 164"
+            fill="none" stroke="#0ea5e9" stroke-width="0.5" opacity="0.18"/>
+      <path d="M150 44 C157 65, 164 90, 166 112 C168 132, 162 150, 148 164"
+            fill="none" stroke="#0ea5e9" stroke-width="0.5" opacity="0.18"/>
+
+      <!-- ===== DIAGONAL CHEEK MESH ===== -->
+      <!-- Left cheek diagonals -->
+      <path d="M48 46 L62 63" stroke="#38bdf8" stroke-width="0.5" opacity="0.2"/>
+      <path d="M36 63 L50 83" stroke="#38bdf8" stroke-width="0.5" opacity="0.18"/>
+      <path d="M34 83 L44 100" stroke="#38bdf8" stroke-width="0.5" opacity="0.15"/>
+      <!-- Right cheek diagonals -->
+      <path d="M152 46 L138 63" stroke="#38bdf8" stroke-width="0.5" opacity="0.2"/>
+      <path d="M164 63 L150 83" stroke="#38bdf8" stroke-width="0.5" opacity="0.18"/>
+      <path d="M166 83 L156 100" stroke="#38bdf8" stroke-width="0.5" opacity="0.15"/>
+
+      <!-- ===== BROW RIDGE ===== -->
+      <path d="M38 62 C50 53, 62 48, 74 50 C78 51, 82 54, 86 57"
+            fill="none" stroke="#7dd3fc" stroke-width="1.3" opacity="0.85"/>
+      <path d="M162 62 C150 53, 138 48, 126 50 C122 51, 118 54, 114 57"
+            fill="none" stroke="#7dd3fc" stroke-width="1.3" opacity="0.85"/>
+      <!-- Brow ridge support lines -->
+      <path d="M50 56 L55 48" stroke="#38bdf8" stroke-width="0.7" opacity="0.4"/>
+      <path d="M64 51 L68 43" stroke="#38bdf8" stroke-width="0.7" opacity="0.4"/>
+      <path d="M150 56 L145 48" stroke="#38bdf8" stroke-width="0.7" opacity="0.4"/>
+      <path d="M136 51 L132 43" stroke="#38bdf8" stroke-width="0.7" opacity="0.4"/>
+
+      <!-- ===== LEFT EYE SOCKET ===== -->
+      <!-- Socket glow fill -->
+      <ellipse cx="70" cy="68" rx="20" ry="11" fill="url(#eyegl)"/>
+      <!-- Outer octagonal socket -->
+      <path d="M48 68 L56 58 L68 55 L80 58 L88 68 L80 78 L68 81 L56 78 Z"
+            fill="rgba(56,189,248,0.05)" stroke="#38bdf8" stroke-width="0.9" opacity="0.8"/>
+      <!-- Inner socket detail lines -->
+      <line x1="56" y1="58" x2="56" y2="78" stroke="#38bdf8" stroke-width="0.5" opacity="0.3"/>
+      <line x1="80" y1="58" x2="80" y2="78" stroke="#38bdf8" stroke-width="0.5" opacity="0.3"/>
+      <!-- Upper eyelid (clipped for blink) -->
+      <g id="eye-lid-l">
+        <path d="M50 68 C56 61, 64 58, 70 58 C76 58, 84 61, 88 68"
+              fill="none" stroke="#7dd3fc" stroke-width="1.2" opacity="0.95"/>
+      </g>
+      <!-- Lower eyelid -->
+      <path d="M50 68 C57 74, 64 77, 70 77 C76 77, 83 74, 88 68"
+            fill="none" stroke="#7dd3fc" stroke-width="0.9" opacity="0.75"/>
+      <!-- Iris ring -->
+      <circle cx="70" cy="68" r="7.5" fill="rgba(56,189,248,0.08)" stroke="#38bdf8" stroke-width="1.1"/>
+      <!-- Iris inner hex -->
+      <polygon points="70,61 76,64 76,72 70,75 64,72 64,64"
+               fill="rgba(56,189,248,0.12)" stroke="#7dd3fc" stroke-width="0.8" opacity="0.8"/>
+      <!-- Iris cross lines -->
+      <line x1="70" y1="61" x2="70" y2="75" stroke="#38bdf8" stroke-width="0.5" opacity="0.35"/>
+      <line x1="63" y1="68" x2="77" y2="68" stroke="#38bdf8" stroke-width="0.5" opacity="0.35"/>
+      <!-- Pupil -->
+      <circle class="pupil-glow" cx="70" cy="68" r="2.8" fill="url(#irisg)"/>
+      <circle cx="70" cy="68" r="1.2" fill="#e0f2fe" opacity="0.9"/>
+      <!-- Corner vertex nodes -->
+      <circle cx="48" cy="68" r="1.3" fill="#38bdf8" opacity="0.9"/>
+      <circle cx="88" cy="68" r="1.3" fill="#38bdf8" opacity="0.9"/>
+      <!-- Bridge connect -->
+      <line x1="88" y1="68" x2="96" y2="63" stroke="#38bdf8" stroke-width="0.6" opacity="0.45"/>
+
+      <!-- ===== RIGHT EYE SOCKET ===== -->
+      <ellipse cx="130" cy="68" rx="20" ry="11" fill="url(#eyegl)"/>
+      <path d="M112 68 L120 58 L130 55 L142 58 L152 68 L142 78 L130 81 L120 78 Z"
+            fill="rgba(56,189,248,0.05)" stroke="#38bdf8" stroke-width="0.9" opacity="0.8"/>
+      <line x1="120" y1="58" x2="120" y2="78" stroke="#38bdf8" stroke-width="0.5" opacity="0.3"/>
+      <line x1="142" y1="58" x2="142" y2="78" stroke="#38bdf8" stroke-width="0.5" opacity="0.3"/>
+      <g id="eye-lid-r">
+        <path d="M112 68 C116 61, 124 58, 130 58 C136 58, 144 61, 150 68"
+              fill="none" stroke="#7dd3fc" stroke-width="1.2" opacity="0.95"/>
+      </g>
+      <path d="M112 68 C117 74, 124 77, 130 77 C136 77, 143 74, 150 68"
+            fill="none" stroke="#7dd3fc" stroke-width="0.9" opacity="0.75"/>
+      <circle cx="130" cy="68" r="7.5" fill="rgba(56,189,248,0.08)" stroke="#38bdf8" stroke-width="1.1"/>
+      <polygon points="130,61 136,64 136,72 130,75 124,72 124,64"
+               fill="rgba(56,189,248,0.12)" stroke="#7dd3fc" stroke-width="0.8" opacity="0.8"/>
+      <line x1="130" y1="61" x2="130" y2="75" stroke="#38bdf8" stroke-width="0.5" opacity="0.35"/>
+      <line x1="123" y1="68" x2="137" y2="68" stroke="#38bdf8" stroke-width="0.5" opacity="0.35"/>
+      <circle class="pupil-glow" cx="130" cy="68" r="2.8" fill="url(#irisg)"/>
+      <circle cx="130" cy="68" r="1.2" fill="#e0f2fe" opacity="0.9"/>
+      <circle cx="112" cy="68" r="1.3" fill="#38bdf8" opacity="0.9"/>
+      <circle cx="150" cy="68" r="1.3" fill="#38bdf8" opacity="0.9"/>
+      <line x1="112" y1="68" x2="104" y2="63" stroke="#38bdf8" stroke-width="0.6" opacity="0.45"/>
+
+      <!-- ===== NOSE BRIDGE & STRUCTURE ===== -->
+      <!-- Bridge sides descending -->
+      <path d="M96 61 C95 70, 93 80, 91 90 C89 96, 87 100, 86 105"
+            fill="none" stroke="#38bdf8" stroke-width="0.85" opacity="0.6"/>
+      <path d="M104 61 C105 70, 107 80, 109 90 C111 96, 113 100, 114 105"
+            fill="none" stroke="#38bdf8" stroke-width="0.85" opacity="0.6"/>
+      <!-- Bridge horizontal cross-bars -->
+      <line x1="95" y1="72" x2="105" y2="72" stroke="#38bdf8" stroke-width="0.6" opacity="0.4"/>
+      <line x1="93" y1="83" x2="107" y2="83" stroke="#38bdf8" stroke-width="0.6" opacity="0.38"/>
+      <line x1="90" y1="95" x2="110" y2="95" stroke="#38bdf8" stroke-width="0.6" opacity="0.35"/>
+      <!-- Nose tip arch -->
+      <path d="M86 105 C88 108, 94 111, 100 111 C106 111, 112 108, 114 105"
+            fill="none" stroke="#7dd3fc" stroke-width="1.1" opacity="0.78"/>
+      <!-- Nostril mesh detail -->
+      <path d="M86 105 C84 108, 82 112, 84 115 C86 117, 90 116, 91 113 C91 110, 89 107, 86 105"
+            fill="rgba(56,189,248,0.07)" stroke="#38bdf8" stroke-width="0.9" opacity="0.65"/>
+      <path d="M114 105 C116 108, 118 112, 116 115 C114 117, 110 116, 109 113 C109 110, 111 107, 114 105"
+            fill="rgba(56,189,248,0.07)" stroke="#38bdf8" stroke-width="0.9" opacity="0.65"/>
+      <!-- Nose tip vertex -->
+      <circle cx="100" cy="111" r="1.5" fill="#7dd3fc" opacity="0.8"/>
+      <!-- Sub-nasal horizontal -->
+      <path d="M86 116 C92 114, 97 115, 100 116 C103 115, 108 114, 114 116"
+            fill="none" stroke="#38bdf8" stroke-width="0.7" opacity="0.48"/>
+
+      <!-- ===== CHEEKBONE MESH ===== -->
+      <!-- Left cheek contour arcs -->
+      <path d="M36 82 C46 76, 58 74, 68 78"
+            fill="none" stroke="#0ea5e9" stroke-width="0.8" opacity="0.5"/>
+      <path d="M32 98 C44 91, 58 88, 70 92"
+            fill="none" stroke="#0ea5e9" stroke-width="0.8" opacity="0.45"/>
+      <path d="M34 114 C46 108, 60 105, 72 108"
+            fill="none" stroke="#0ea5e9" stroke-width="0.75" opacity="0.4"/>
+      <!-- Right cheek contour arcs -->
+      <path d="M164 82 C154 76, 142 74, 132 78"
+            fill="none" stroke="#0ea5e9" stroke-width="0.8" opacity="0.5"/>
+      <path d="M168 98 C156 91, 142 88, 130 92"
+            fill="none" stroke="#0ea5e9" stroke-width="0.8" opacity="0.45"/>
+      <path d="M166 114 C154 108, 140 105, 128 108"
+            fill="none" stroke="#0ea5e9" stroke-width="0.75" opacity="0.4"/>
+      <!-- Mid-face horizontal ring -->
+      <path d="M36 90 C50 83, 66 80, 82 84 C90 87, 96 91, 100 93 C104 91, 110 87, 118 84 C134 80, 150 83, 164 90"
+            fill="none" stroke="#38bdf8" stroke-width="0.9" opacity="0.5"/>
+      <!-- Lower cheek ring -->
+      <path d="M40 110 C54 104, 70 101, 84 104 C91 106, 97 110, 100 112 C103 110, 109 106, 116 104 C130 101, 146 104, 160 110"
+            fill="none" stroke="#38bdf8" stroke-width="0.85" opacity="0.48"/>
+
+      <!-- ===== EAR MESH ===== -->
+      <!-- Left ear -->
+      <path d="M30 82 C26 72, 23 85, 23 91 C23 99, 26 108, 32 113"
+            fill="none" stroke="#38bdf8" stroke-width="1.1" opacity="0.55"/>
+      <path d="M30 84 C27 88, 27 96, 30 103"
+            fill="none" stroke="#7dd3fc" stroke-width="0.8" opacity="0.4"/>
+      <path d="M28 88 C29 92, 29 96, 28 100"
+            fill="none" stroke="#38bdf8" stroke-width="0.6" opacity="0.3"/>
+      <!-- Right ear -->
+      <path d="M170 82 C174 72, 177 85, 177 91 C177 99, 174 108, 168 113"
+            fill="none" stroke="#38bdf8" stroke-width="1.1" opacity="0.55"/>
+      <path d="M170 84 C173 88, 173 96, 170 103"
+            fill="none" stroke="#7dd3fc" stroke-width="0.8" opacity="0.4"/>
+      <path d="M172 88 C171 92, 171 96, 172 100"
+            fill="none" stroke="#38bdf8" stroke-width="0.6" opacity="0.3"/>
+
+      <!-- ===== PHILTRUM & UPPER LIP ===== -->
+      <!-- Philtrum channels -->
+      <path d="M96 116 L94 122 L90 127" fill="none" stroke="#38bdf8" stroke-width="0.7" opacity="0.48"/>
+      <path d="M104 116 L106 122 L110 127" fill="none" stroke="#38bdf8" stroke-width="0.7" opacity="0.48"/>
+      <!-- Cupid's bow -->
+      <path d="M86 126 C91 121, 96 122, 100 123 C104 122, 109 121, 114 126"
+            fill="none" stroke="#bae6fd" stroke-width="0.9" opacity="0.75"/>
+      <!-- Upper lip structure -->
+      <path d="M74 129 C82 124, 93 122, 100 123 C107 122, 118 124, 126 129"
+            fill="none" stroke="#7dd3fc" stroke-width="1.3" opacity="0.85"/>
+      <!-- Mouth corner nodes -->
+      <circle cx="74" cy="130" r="1.6" fill="#38bdf8" opacity="0.92"/>
+      <circle cx="126" cy="130" r="1.6" fill="#38bdf8" opacity="0.92"/>
+      <!-- Corner-to-jaw connect lines -->
+      <line x1="74" y1="130" x2="66" y2="136" stroke="#38bdf8" stroke-width="0.7" opacity="0.4"/>
+      <line x1="126" y1="130" x2="134" y2="136" stroke="#38bdf8" stroke-width="0.7" opacity="0.4"/>
+
+      <!-- ===== ANIMATED JAW / LOWER FACE ===== -->
+      <!-- Lower lip (animated) -->
+      <path id="lower-lip"
+            d="M76 133 C84 138, 94 141, 100 141 C106 141, 116 138, 124 133"
+            fill="none" stroke="#7dd3fc" stroke-width="1.3"/>
+      <!-- Inner mouth cavity (animated) -->
+      <path id="inner-mouth"
+            d="M80 131 C88 135, 96 137, 100 137 C104 137, 112 135, 120 131"
+            fill="rgba(2,132,199,0.08)" stroke="#38bdf8" stroke-width="0.85"/>
+      <!-- Jaw horizontal ring (animated) -->
+      <path id="jaw-ring"
+            d="M56 145 C68 139, 82 137, 96 138 C98 138, 99 138, 100 138 C101 138, 102 138, 104 138 C118 137, 132 139, 144 145"
+            fill="none" stroke="#0ea5e9" stroke-width="0.9" opacity="0.7"/>
+      <!-- Main jaw mesh polygon (animated) -->
+      <path id="jaw-mesh"
+            d="M56 144 L70 140 L86 138 L100 139 L114 138 L130 140 L144 144 L142 158 L130 168 L116 175 L100 178 L84 175 L70 168 L58 158 Z"
+            fill="rgba(2,132,199,0.05)" stroke="#38bdf8" stroke-width="1.5"/>
+      <!-- Secondary jaw ring lower (animated) -->
+      <path id="jaw-ring2"
+            d="M60 158 C72 153, 84 151, 100 152 C116 151, 128 153, 140 158"
+            fill="none" stroke="#38bdf8" stroke-width="0.75" opacity="0.55"/>
+      <!-- Chin arch (animated) -->
+      <path id="chin-detail"
+            d="M72 164 C80 170, 90 174, 100 175 C110 174, 120 170, 128 164"
+            fill="none" stroke="#38bdf8" stroke-width="0.9" opacity="0.72"/>
+      <!-- Chin center vertex -->
+      <circle id="chin-dot" cx="100" cy="175" r="1.6" fill="#38bdf8" opacity="0.85"/>
+
+      <!-- ===== NECK SUGGESTION ===== -->
+      <path d="M82 178 C84 186, 90 192, 100 194 C110 192, 116 186, 118 178"
+            fill="none" stroke="#38bdf8" stroke-width="0.7" opacity="0.28"/>
+      <line x1="90"  y1="180" x2="90"  y2="198" stroke="#38bdf8" stroke-width="0.5" opacity="0.18"/>
+      <line x1="100" y1="183" x2="100" y2="200" stroke="#38bdf8" stroke-width="0.5" opacity="0.18"/>
+      <line x1="110" y1="180" x2="110" y2="198" stroke="#38bdf8" stroke-width="0.5" opacity="0.18"/>
+
+      <!-- ===== KEY VERTEX DOTS (structural landmarks) ===== -->
+      <circle cx="100" cy="9"   r="1.8" fill="#7dd3fc" opacity="0.95"/>
+      <circle cx="100" cy="28"  r="1.2" fill="#38bdf8" opacity="0.6"/>
+      <circle cx="100" cy="48"  r="1.2" fill="#38bdf8" opacity="0.55"/>
+      <circle cx="38"  cy="38"  r="1.2" fill="#38bdf8" opacity="0.6"/>
+      <circle cx="162" cy="38"  r="1.2" fill="#38bdf8" opacity="0.6"/>
+      <circle cx="30"  cy="105" r="1.2" fill="#0ea5e9" opacity="0.45"/>
+      <circle cx="170" cy="105" r="1.2" fill="#0ea5e9" opacity="0.45"/>
+      <circle cx="56"  cy="144" r="1.2" fill="#38bdf8" opacity="0.7"/>
+      <circle cx="144" cy="144" r="1.2" fill="#38bdf8" opacity="0.7"/>
+
+      <!-- ===== SWEEPING SCAN LINE ===== -->
+      <g clip-path="url(#faceClip)">
+        <rect id="scan-line" x="20" width="160" height="1.5" y="100"
+              fill="url(#slg)" opacity="0.7"/>
+      </g>
     </svg>
   </div>
 
   <div id="ui-panel">
-    <input type="password" id="api-key" placeholder="Enter Gemini API Key">
+    <input type="password" id="api-key" placeholder="[ GEMINI API KEY ]">
     <div id="status">System Standby</div>
     <div id="response-box">Tap the button below to initialize the audio stream...</div>
-    <button id="mic-btn">Initiate Neural Link</button>
+    <button id="mic-btn">⬡ Initiate Neural Link</button>
   </div>
 </div>
 
 <script>
-  const jawMesh = document.getElementById('jaw-mesh');
-  const innerMouth = document.getElementById('inner-mouth');
-  const micBtn = document.getElementById('mic-btn');
-  const status = document.getElementById('status');
+  // ─── DOM references ───
+  const micBtn      = document.getElementById('mic-btn');
+  const status      = document.getElementById('status');
   const responseBox = document.getElementById('response-box');
   const apiKeyInput = document.getElementById('api-key');
 
+  // Animated jaw elements
+  const lowerLip   = document.getElementById('lower-lip');
+  const innerMouth = document.getElementById('inner-mouth');
+  const jawMesh    = document.getElementById('jaw-mesh');
+  const jawRing    = document.getElementById('jaw-ring');
+  const jawRing2   = document.getElementById('jaw-ring2');
+  const chinDetail = document.getElementById('chin-detail');
+  const chinDot    = document.getElementById('chin-dot');
+
+  // Resting path data
+  const REST = {
+    lowerLip:   'M76 133 C84 138, 94 141, 100 141 C106 141, 116 138, 124 133',
+    innerMouth: 'M80 131 C88 135, 96 137, 100 137 C104 137, 112 135, 120 131',
+    jawRing:    'M56 145 C68 139, 82 137, 96 138 C98 138, 99 138, 100 138 C101 138, 102 138, 104 138 C118 137, 132 139, 144 145',
+    jawMesh:    'M56 144 L70 140 L86 138 L100 139 L114 138 L130 140 L144 144 L142 158 L130 168 L116 175 L100 178 L84 175 L70 168 L58 158 Z',
+    jawRing2:   'M60 158 C72 153, 84 151, 100 152 C116 151, 128 153, 140 158',
+    chinDetail: 'M72 164 C80 170, 90 174, 100 175 C110 174, 120 170, 128 164',
+    chinDotCY:  '175'
+  };
+
   let lipsyncTimer = null;
-  let voiceRecognizer = null;
 
-  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechLib = window.SpeechRecognition || window.webkitSpeechRecognition;
-    voiceRecognizer = new SpeechLib();
-    voiceRecognizer.continuous = false;
-    voiceRecognizer.interimResults = false;
-    voiceRecognizer.lang = 'en-US';
-
-    voiceRecognizer.onstart = () => { 
-      status.textContent = "Awaiting Audio Input..."; 
-      status.style.color = "#38bdf8";
-    };
-    
-    voiceRecognizer.onerror = () => { 
-      status.textContent = "Audio Pipeline Failed"; 
-      status.style.color = "#ef4444";
-      micBtn.disabled = false; 
-    };
-    
-    voiceRecognizer.onresult = async (event) => {
-      const userPrompt = event.results[0][0].transcript;
-      status.textContent = "Processing via Gemini...";
-      status.style.color = "#fcd34d";
-      await streamGeminiPayload(userPrompt);
-    };
-  } else {
-    micBtn.textContent = "Hardware Engine Unsupported";
-    micBtn.disabled = true;
-  }
-
+  // ─── Lipsync: morph jaw mesh based on open amount ───
   function engageMouthMovement() {
     clearInterval(lipsyncTimer);
     lipsyncTimer = setInterval(() => {
-      // Generate randomized but organic feeling displacement
-      const openAmount = Math.random() * 20; 
-      const widthFlex = Math.random() * 4;
-      
-      const lipY = (145 + openAmount * 0.4).toFixed(1);
-      const chinY = (180 + openAmount).toFixed(1);
-      const jawY = (170 + openAmount * 0.7).toFixed(1);
-      
-      const leftJawX = (85 - widthFlex).toFixed(1);
-      const rightJawX = (115 + widthFlex).toFixed(1);
+      const open = Math.random() * 20;
+      const w    = Math.random() * 3;
 
-      // Morph the main jaw
-      jawMesh.setAttribute('d', 
-        `M65 150 L85 140 L100 ${lipY} L115 140 L135 150 L${rightJawX} ${jawY} L100 ${chinY} L${leftJawX} ${jawY} Z`
+      // Lower lip drops
+      const llMid = (141 + open * 0.75).toFixed(1);
+      lowerLip.setAttribute('d',
+        `M76 133 C84 ${(138 + open * 0.8).toFixed(1)}, 94 ${llMid}, 100 ${(parseFloat(llMid)+1).toFixed(1)} C106 ${llMid}, 116 ${(138 + open * 0.8).toFixed(1)}, 124 133`
       );
-      
-      // Morph the inner mouth line to give depth
-      const innerY = (150 + openAmount * 0.6).toFixed(1);
-      innerMouth.setAttribute('d', `M80 145 L100 ${innerY} L120 145`);
-      
-    }, 70); // Slightly faster interval for snappier, robotic lip sync
+
+      // Inner mouth opens
+      const imMid = (137 + open * 0.55).toFixed(1);
+      innerMouth.setAttribute('d',
+        `M80 131 C88 ${(135 + open * 0.65).toFixed(1)}, 96 ${imMid}, 100 ${(parseFloat(imMid)+1).toFixed(1)} C104 ${imMid}, 112 ${(135 + open * 0.65).toFixed(1)}, 120 131`
+      );
+
+      // Jaw ring drops
+      const jrBase = (145 + open * 0.35).toFixed(1);
+      const jrMid  = (138 + open * 0.35).toFixed(1);
+      jawRing.setAttribute('d',
+        `M56 ${jrBase} C68 ${jrMid}, 82 ${(parseFloat(jrMid)-1).toFixed(1)}, 96 ${jrMid} C98 ${jrMid}, 99 ${jrMid}, 100 ${jrMid} C101 ${jrMid}, 102 ${jrMid}, 104 ${jrMid} C118 ${(parseFloat(jrMid)-1).toFixed(1)}, 132 ${jrMid}, 144 ${jrBase}`
+      );
+
+      // Main jaw mesh morphs
+      const jawMidY  = (138 + open * 0.4).toFixed(1);
+      const jawLowY  = (158 + open * 0.6).toFixed(1);
+      const jawSideY = (168 + open * 0.7).toFixed(1);
+      const jawWingY = (175 + open * 0.8).toFixed(1);
+      const chinY    = (178 + open).toFixed(1);
+      const wL = (70 - w).toFixed(1);
+      const wR = (130 + w).toFixed(1);
+      jawMesh.setAttribute('d',
+        `M56 144 L70 140 L86 ${jawMidY} L100 ${(parseFloat(jawMidY)+1).toFixed(1)} L114 ${jawMidY} L130 140 L144 144 L142 ${jawLowY} L${wR} ${jawSideY} L116 ${jawWingY} L100 ${chinY} L84 ${jawWingY} L${wL} ${jawSideY} L58 ${jawLowY} Z`
+      );
+
+      // Lower jaw ring2 drops
+      const jr2Base = (158 + open * 0.55).toFixed(1);
+      const jr2Mid  = (151 + open * 0.55).toFixed(1);
+      jawRing2.setAttribute('d',
+        `M60 ${jr2Base} C72 ${jr2Mid}, 84 ${(parseFloat(jr2Mid)-1).toFixed(1)}, 100 ${jr2Mid} C116 ${(parseFloat(jr2Mid)-1).toFixed(1)}, 128 ${jr2Mid}, 140 ${jr2Base}`
+      );
+
+      // Chin arch drops
+      const cdBase = (164 + open * 0.5).toFixed(1);
+      const cdMid  = (175 + open * 0.8).toFixed(1);
+      chinDetail.setAttribute('d',
+        `M72 ${cdBase} C80 ${(parseFloat(cdBase)+6).toFixed(1)}, 90 ${cdMid}, 100 ${(parseFloat(cdMid)+2).toFixed(1)} C110 ${cdMid}, 120 ${(parseFloat(cdBase)+6).toFixed(1)}, 128 ${cdBase}`
+      );
+
+      // Chin dot drops
+      chinDot.setAttribute('cy', (175 + open).toFixed(1));
+
+    }, 65);
   }
 
+  // ─── Settle back to resting position ───
   function settleMouthPosition() {
     clearInterval(lipsyncTimer);
-    // Return vertices to exact resting state
-    jawMesh.setAttribute('d', 'M65 150 L85 140 L100 145 L115 140 L135 150 L115 170 L100 180 L85 170 Z');
-    innerMouth.setAttribute('d', 'M80 145 L100 150 L120 145');
+    lowerLip.setAttribute('d',   REST.lowerLip);
+    innerMouth.setAttribute('d', REST.innerMouth);
+    jawRing.setAttribute('d',    REST.jawRing);
+    jawMesh.setAttribute('d',    REST.jawMesh);
+    jawRing2.setAttribute('d',   REST.jawRing2);
+    chinDetail.setAttribute('d', REST.chinDetail);
+    chinDot.setAttribute('cy',   REST.chinDotCY);
   }
 
-  async function streamGeminiPayload(prompt) {
-    const accessKey = apiKeyInput.value.trim();
-    if (!accessKey) { 
-      status.textContent = "Error: Authentication Key Missing"; 
-      status.style.color = "#ef4444";
-      micBtn.disabled = false; 
-      return; 
-    }
+  // ─── Speech Recognition setup ───
+  let voiceRecognizer = null;
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechLib = window.SpeechRecognition || window.webkitSpeechRecognition;
+    voiceRecognizer = new SpeechLib();
+    voiceRecognizer.continuous    = false;
+    voiceRecognizer.interimResults = false;
+    voiceRecognizer.lang          = 'en-US';
 
+    voiceRecognizer.onstart = () => {
+      status.textContent = 'Awaiting Audio Input...';
+      status.style.color = '#38bdf8';
+    };
+    voiceRecognizer.onerror = () => {
+      status.textContent = 'Audio Pipeline Failed';
+      status.style.color = '#ef4444';
+      micBtn.disabled = false;
+    };
+    voiceRecognizer.onresult = async (e) => {
+      const prompt = e.results[0][0].transcript;
+      status.textContent = 'Processing via Gemini...';
+      status.style.color = '#fcd34d';
+      await streamGeminiPayload(prompt);
+    };
+  } else {
+    micBtn.textContent = 'Hardware Engine Unsupported';
+    micBtn.disabled    = true;
+  }
+
+  // ─── Gemini API call ───
+  async function streamGeminiPayload(prompt) {
+    const key = apiKeyInput.value.trim();
+    if (!key) {
+      status.textContent = 'Error: Authentication Key Missing';
+      status.style.color = '#ef4444';
+      micBtn.disabled    = false;
+      return;
+    }
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${accessKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      
-      const parsedData = await response.json();
-      const rawText = parsedData.candidates[0].content.parts[0].text;
-      
-      responseBox.textContent = rawText;
-      processTextToVocalHardware(rawText);
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        }
+      );
+      const data = await res.json();
+      const text = data.candidates[0].content.parts[0].text;
+      responseBox.textContent = text;
+      processTextToVocalHardware(text);
     } catch (err) {
       console.error(err);
-      status.textContent = "Network Uplink Terminated";
-      status.style.color = "#ef4444";
-      micBtn.disabled = false;
+      status.textContent = 'Network Uplink Terminated';
+      status.style.color = '#ef4444';
+      micBtn.disabled    = false;
     }
   }
 
+  // ─── Text-to-Speech ───
   function processTextToVocalHardware(text) {
-    const sanitizedText = text.replace(/[*#`_\-]/g, '');
-    const speechStream = new SpeechSynthesisUtterance(sanitizedText);
-    
-    // Attempt to select a tech-sounding or default English voice
+    const clean = text.replace(/[*#`_\-]/g, '');
+    const utterance = new SpeechSynthesisUtterance(clean);
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) || voices[0];
-    if (preferredVoice) speechStream.voice = preferredVoice;
-    
-    speechStream.rate = 1.05; // Slightly faster for a crisp, AI-like cadence
-    speechStream.pitch = 0.9;
+    const voice  = voices.find(v => v.lang === 'en-US' && v.name.includes('Google')) || voices[0];
+    if (voice) utterance.voice = voice;
+    utterance.rate  = 1.05;
+    utterance.pitch = 0.9;
 
-    speechStream.onstart = () => {
-      status.textContent = "Avatar Voice Active";
-      status.style.color = "#10b981";
+    utterance.onstart = () => {
+      status.textContent = 'Avatar Voice Active';
+      status.style.color = '#10b981';
       engageMouthMovement();
     };
-    
-    speechStream.onend = () => {
-      status.textContent = "System Standby";
-      status.style.color = "#94a3b8";
-      micBtn.disabled = false;
+    utterance.onend = () => {
+      status.textContent = 'System Standby';
+      status.style.color = '#64748b';
+      micBtn.disabled    = false;
       settleMouthPosition();
     };
-
-    speechStream.onerror = () => {
-      status.textContent = "System Standby";
-      status.style.color = "#94a3b8";
-      micBtn.disabled = false;
+    utterance.onerror = () => {
+      status.textContent = 'System Standby';
+      status.style.color = '#64748b';
+      micBtn.disabled    = false;
       settleMouthPosition();
     };
-
-    window.speechSynthesis.speak(speechStream);
+    window.speechSynthesis.speak(utterance);
   }
 
+  // ─── Button click ───
   micBtn.addEventListener('click', () => {
     if (!voiceRecognizer) return;
     micBtn.disabled = true;
-    
-    // Ensures voices are loaded in browser memory before initiating
-    window.speechSynthesis.getVoices(); 
-    
+    window.speechSynthesis.getVoices();
     voiceRecognizer.start();
   });
 </script>
