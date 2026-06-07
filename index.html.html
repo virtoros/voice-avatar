@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Voice-Automated Avatar</title>
+  <style>
+    body, html {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: #0f172a; font-family: system-ui, sans-serif; overflow: hidden;
+    }
+    #app-container {
+      display: flex; flex-direction: column; justify-content: center;
+      align-items: center; height: 100vh; width: 100vw;
+    }
+    #avatar-svg {
+      max-width: 280px; max-height: 280px; margin-bottom: 24px;
+    }
+    #ui-panel {
+      width: 90%; max-width: 400px; background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(8px); padding: 20px; border-radius: 16px; 
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);
+      text-align: center;
+    }
+    #status {
+      color: #38bdf8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 16px; font-weight: bold;
+    }
+    button {
+      background: #10b981; color: white; border: none; padding: 14px 28px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
+      transition: background 0.2s, transform 0.1s; width: 100%;
+    }
+    button:hover { background: #059669; }
+    button:active { transform: scale(0.98); }
+    .listening { background: #ef4444 !important; }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+  <svg id="avatar-svg" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="80" fill="#fcd34d" />
+    <circle cx="70" cy="85" r="8" fill="#1e293b" />
+    <circle cx="130" cy="85" r="8" fill="#1e293b" />
+    <ellipse id="avatar-mouth" cx="100" cy="130" rx="20" ry="4" fill="#1e293b" />
+  </svg>
+
+  <div id="ui-panel">
+    <div id="status">Audio Engine Offline</div>
+    <button id="start-btn">Connect Audio Stream</button>
+  </div>
+</div>
+
+<script>
+  const mouth = document.getElementById('avatar-mouth');
+  const startBtn = document.getElementById('start-btn');
+  const status = document.getElementById('status');
+
+  let audioContext = null;
+  let analyser = null;
+  let dataArray = null;
+  let isListening = false;
+
+  async function initializeAudioPipeline() {
+    try {
+      // Capture the local hardware system audio channel input loop
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      
+      // Fast Fourier Transform (FFT) frequency spectrum extraction engine
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256; 
+      
+      source.connect(analyser);
+      
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+      
+      isListening = true;
+      status.textContent = "Monitoring System Audio... Speak or Play Gemini";
+      status.style.color = "#10b981";
+      startBtn.textContent = "Disconnect Stream";
+      startBtn.classList.add('listening');
+      
+      // Execute the real-time drawing loop
+      renderLipsyncLoop();
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Mic/Stereo Permission Denied";
+      status.style.color = "#ef4444";
+    }
+  }
+
+  function renderLipsyncLoop() {
+    if (!isListening) return;
+
+    // Pull real-time volume dynamic snapshots across frequencies
+    analyser.getByteFrequencyData(dataArray);
+    
+    // Calculate total volume energy by averaging lower vocal ranges
+    let vocalRangeSum = 0;
+    const peakVocalBins = 30; 
+    for(let i = 0; i < peakVocalBins; i++) {
+      vocalRangeSum += dataArray[i];
+    }
+    const averageVolume = vocalRangeSum / peakVocalBins;
+    
+    // Convert mathematical volume into vertical jaw translation geometry
+    // Maps volume (0-255) to mouth height range (4px to 24px)
+    const voiceIntensityScaler = 0.08; 
+    let calculatedMouthHeight = 4 + (averageVolume * voiceIntensityScaler);
+    
+    // Clamp the dimensions to prevent distortion artifacts
+    if (calculatedMouthHeight > 24) calculatedMouthHeight = 24;
+    
+    // Apply changes smoothly inside the screen render interval
+    mouth.setAttribute('ry', calculatedMouthHeight.toFixed(1));
+    
+    // Loop smoothly at 60 frames per second matching monitor refresh rates
+    requestAnimationFrame(renderLipsyncLoop);
+  }
+
+  function stopAudioPipeline() {
+    isListening = false;
+    if (audioContext) audioContext.close();
+    mouth.setAttribute('ry', '4');
+    status.textContent = "Audio Engine Offline";
+    status.style.color = "#38bdf8";
+    startBtn.textContent = "Connect Audio Stream";
+    startBtn.classList.remove('listening');
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (!isListening) {
+      initializeAudioPipeline();
+    } else {
+      stopAudioPipeline();
+    }
+  });
+</script>
+
+</body>
+</html>
