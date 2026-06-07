@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Local Voice-Automated Avatar</title>
+  <title>Local Voice-Automated Wireframe Avatar</title>
   <style>
     body, html {
       margin: 0; padding: 0; width: 100%; height: 100%;
@@ -15,6 +15,8 @@
     }
     #avatar-svg {
       max-width: 280px; max-height: 280px; margin-bottom: 24px;
+      /* Adds the digital holographic glow effect */
+      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
     }
     #ui-panel {
       width: 90%; max-width: 400px; background: rgba(30, 41, 59, 0.8);
@@ -40,10 +42,19 @@
 
 <div id="app-container">
   <svg id="avatar-svg" viewBox="0 0 200 200">
-    <circle cx="100" cy="100" r="80" fill="#fcd34d" />
-    <circle cx="70" cy="85" r="8" fill="#1e293b" />
-    <circle cx="130" cy="85" r="8" fill="#1e293b" />
-    <ellipse id="avatar-mouth" cx="100" cy="130" rx="20" ry="4" fill="#1e293b" />
+    <path id="wireframe-contour" d="M100 20 L155 45 L170 100 L150 155 L100 185 L50 155 L30 100 L45 45 Z" 
+          fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.4" />
+    
+    <path id="wireframe-inner" d="M100 20 L100 70 M45 45 L100 70 L155 45 M30 100 L75 90 L100 70 L125 90 L170 100 M50 155 L75 130 L100 110 L125 130 L150 155" 
+          fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.3" />
+          
+    <circle cx="75" cy="90" r="5" fill="none" stroke="#38bdf8" stroke-width="2" />
+    <circle cx="75" cy="90" r="1.5" fill="#38bdf8" />
+    <circle cx="125" cy="90" r="5" fill="none" stroke="#38bdf8" stroke-width="2" />
+    <circle cx="125" cy="90" r="1.5" fill="#38bdf8" />
+    
+    <path id="jaw-mesh" d="M75 130 L100 135 L125 130 L100 145 Z" 
+          fill="none" stroke="#38bdf8" stroke-width="2" />
   </svg>
 
   <div id="ui-panel">
@@ -53,7 +64,7 @@
 </div>
 
 <script>
-  const mouth = document.getElementById('avatar-mouth');
+  const jawMesh = document.getElementById('jaw-mesh');
   const startBtn = document.getElementById('start-btn');
   const status = document.getElementById('status');
 
@@ -64,13 +75,11 @@
 
   async function initializeAudioPipeline() {
     try {
-      // Capture the local hardware system audio channel input loop
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioContext.createMediaStreamSource(stream);
       
-      // Fast Fourier Transform (FFT) frequency spectrum extraction engine
       analyser = audioContext.createAnalyser();
       analyser.fftSize = 256; 
       
@@ -85,7 +94,6 @@
       startBtn.textContent = "Disconnect Stream";
       startBtn.classList.add('listening');
       
-      // Execute the real-time drawing loop
       renderLipsyncLoop();
     } catch (err) {
       console.error(err);
@@ -97,10 +105,8 @@
   function renderLipsyncLoop() {
     if (!isListening) return;
 
-    // Pull real-time volume dynamic snapshots across frequencies
     analyser.getByteFrequencyData(dataArray);
     
-    // Calculate total volume energy by averaging lower vocal ranges
     let vocalRangeSum = 0;
     const peakVocalBins = 30; 
     for(let i = 0; i < peakVocalBins; i++) {
@@ -108,25 +114,29 @@
     }
     const averageVolume = vocalRangeSum / peakVocalBins;
     
-    // Convert mathematical volume into vertical jaw translation geometry
-    // Maps volume (0-255) to mouth height range (4px to 24px)
-    const voiceIntensityScaler = 0.08; 
-    let calculatedMouthHeight = 4 + (averageVolume * voiceIntensityScaler);
+    // Convert audio intensity directly into vertical vertex morphing
+    const intensityScaler = 0.15; 
+    let displacement = averageVolume * intensityScaler;
     
-    // Clamp the dimensions to prevent distortion artifacts
-    if (calculatedMouthHeight > 24) calculatedMouthHeight = 24;
+    if (displacement > 35) displacement = 35; // Prevents vector structural breaking
     
-    // Apply changes smoothly inside the screen render interval
-    mouth.setAttribute('ry', calculatedMouthHeight.toFixed(1));
+    // Dynamically morph the coordinates of the polygon jaw path
+    const targetY1 = (135 + displacement).toFixed(1);
+    const targetY2 = (145 + displacement * 1.5).toFixed(1);
+    const updatedPath = `M75 130 L100 ${targetY1} L125 130 L100 ${targetY2} Z`;
     
-    // Loop smoothly at 60 frames per second matching monitor refresh rates
+    jawMesh.setAttribute('d', updatedPath);
+    
     requestAnimationFrame(renderLipsyncLoop);
   }
 
   function stopAudioPipeline() {
     isListening = false;
     if (audioContext) audioContext.close();
-    mouth.setAttribute('ry', '4');
+    
+    // Reset path back to original structural blueprint values
+    jawMesh.setAttribute('d', 'M75 130 L100 135 L125 130 L100 145 Z');
+    
     status.textContent = "Audio Engine Offline";
     status.style.color = "#38bdf8";
     startBtn.textContent = "Connect Audio Stream";
