@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Local Voice-Automated Wireframe Avatar</title>
+  <title>Local Automated Wireframe Avatar</title>
   <style>
     body, html {
       margin: 0; padding: 0; width: 100%; height: 100%;
@@ -14,141 +14,174 @@
       align-items: center; height: 100vh; width: 100vw;
     }
     #avatar-svg {
-      max-width: 280px; max-height: 280px; margin-bottom: 24px;
-      /* Adds the digital holographic glow effect */
+      max-width: 250px; max-height: 250px; margin-bottom: 24px;
       filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
     }
     #ui-panel {
-      width: 90%; max-width: 400px; background: rgba(30, 41, 59, 0.8);
+      width: 90%; max-width: 420px; background: rgba(30, 41, 59, 0.85);
       backdrop-filter: blur(8px); padding: 20px; border-radius: 16px; 
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05);
-      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05);
+      text-align: center; box-sizing: border-box;
     }
-    #status {
-      color: #38bdf8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
-      margin-bottom: 16px; font-weight: bold;
+    #status { 
+      color: #94a3b8; font-size: 11px; text-transform: uppercase; 
+      letter-spacing: 1px; margin-bottom: 16px; font-weight: bold; 
+    }
+    #response-box { 
+      color: #f8f9fa; font-size: 14px; max-height: 90px; overflow-y: auto; 
+      margin-bottom: 16px; text-align: left; background: #1e293b; 
+      padding: 10px; border-radius: 8px; border: 1px solid #334155;
     }
     button {
-      background: #10b981; color: white; border: none; padding: 14px 28px;
-      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px;
-      transition: background 0.2s, transform 0.1s; width: 100%;
+      background: #2563eb; color: white; border: none; padding: 14px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%;
+      transition: background 0.2s;
     }
-    button:hover { background: #059669; }
-    button:active { transform: scale(0.98); }
-    .listening { background: #ef4444 !important; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    input { 
+      width: 100%; padding: 10px; margin-bottom: 12px; background: #1e293b; 
+      border: 1px solid #334155; border-radius: 8px; color: white; 
+      box-sizing: border-box; font-size: 13px; text-align: center;
+    }
   </style>
 </head>
 <body>
 
 <div id="app-container">
   <svg id="avatar-svg" viewBox="0 0 200 200">
-    <path id="wireframe-contour" d="M100 20 L155 45 L170 100 L150 155 L100 185 L50 155 L30 100 L45 45 Z" 
-          fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.4" />
+    <path d="M100 20 L155 45 L170 100 L150 155 L100 185 L50 155 L30 100 L45 45 Z" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.4" />
+    <path d="M100 20 L100 70 M45 45 L100 70 L155 45 M30 100 L75 90 L100 70 L125 90 L170 100 M50 155 L75 130 L100 110 L125 130 L150 155" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.3" />
     
-    <path id="wireframe-inner" d="M100 20 L100 70 M45 45 L100 70 L155 45 M30 100 L75 90 L100 70 L125 90 L170 100 M50 155 L75 130 L100 110 L125 130 L150 155" 
-          fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.3" />
-          
     <circle cx="75" cy="90" r="5" fill="none" stroke="#38bdf8" stroke-width="2" />
     <circle cx="75" cy="90" r="1.5" fill="#38bdf8" />
     <circle cx="125" cy="90" r="5" fill="none" stroke="#38bdf8" stroke-width="2" />
     <circle cx="125" cy="90" r="1.5" fill="#38bdf8" />
     
-    <path id="jaw-mesh" d="M75 130 L100 135 L125 130 L100 145 Z" 
-          fill="none" stroke="#38bdf8" stroke-width="2" />
+    <path id="jaw-mesh" d="M75 130 L100 135 L125 130 L100 145 Z" fill="none" stroke="#38bdf8" stroke-width="2" />
   </svg>
 
   <div id="ui-panel">
-    <div id="status">Audio Engine Offline</div>
-    <button id="start-btn">Connect Audio Stream</button>
+    <input type="password" id="api-key" placeholder="Paste Gemini API Key Here">
+    <div id="status">System Disconnected</div>
+    <div id="response-box">Tap the button below to speak...</div>
+    <button id="mic-btn">Tap to Talk to Avatar</button>
   </div>
 </div>
 
 <script>
   const jawMesh = document.getElementById('jaw-mesh');
-  const startBtn = document.getElementById('start-btn');
+  const micBtn = document.getElementById('mic-btn');
   const status = document.getElementById('status');
+  const responseBox = document.getElementById('response-box');
+  const apiKeyInput = document.getElementById('api-key');
 
-  let audioContext = null;
-  let analyser = null;
-  let dataArray = null;
-  let isListening = false;
+  let lipsyncTimer = null;
+  let voiceRecognizer = null;
 
-  async function initializeAudioPipeline() {
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechLib = window.SpeechRecognition || window.webkitSpeechRecognition;
+    voiceRecognizer = new SpeechLib();
+    voiceRecognizer.continuous = false;
+    voiceRecognizer.interimResults = false;
+    voiceRecognizer.lang = 'en-US';
+
+    voiceRecognizer.onstart = () => { 
+      status.textContent = "Listening to your voice..."; 
+      status.style.color = "#38bdf8";
+    };
+    
+    voiceRecognizer.onerror = () => { 
+      status.textContent = "Voice collection failed."; 
+      status.style.color = "#ef4444";
+      micBtn.disabled = false; 
+    };
+    
+    voiceRecognizer.onresult = async (event) => {
+      const userPrompt = event.results[0][0].transcript;
+      status.textContent = "Sending stream to Google AI...";
+      await streamGeminiPayload(userPrompt);
+    };
+  } else {
+    micBtn.textContent = "Hardware Engine Unsupported";
+    micBtn.disabled = true;
+  }
+
+  function engageMouthMovement() {
+    clearInterval(lipsyncTimer);
+    lipsyncTimer = setInterval(() => {
+      const displacement = Math.floor(Math.random() * 25);
+      const targetY1 = (135 + displacement).toFixed(1);
+      const targetY2 = (145 + displacement * 1.5).toFixed(1);
+      jawMesh.setAttribute('d', `M75 130 L100 ${targetY1} L125 130 L100 ${targetY2} Z`);
+    }, 85);
+  }
+
+  function settleMouthPosition() {
+    clearInterval(lipsyncTimer);
+    jawMesh.setAttribute('d', 'M75 130 L100 135 L125 130 L100 145 Z');
+  }
+
+  async function streamGeminiPayload(prompt) {
+    const accessKey = apiKeyInput.value.trim();
+    if (!accessKey) { 
+      status.textContent = "Error: Key Box Empty"; 
+      status.style.color = "#ef4444";
+      micBtn.disabled = false; 
+      return; 
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${accessKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
       
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
+      const parsedData = await response.json();
+      const rawText = parsedData.candidates[0].content.parts[0].text;
       
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256; 
-      
-      source.connect(analyser);
-      
-      const bufferLength = analyser.frequencyBinCount;
-      dataArray = new Uint8Array(bufferLength);
-      
-      isListening = true;
-      status.textContent = "Monitoring System Audio... Speak or Play Gemini";
-      status.style.color = "#10b981";
-      startBtn.textContent = "Disconnect Stream";
-      startBtn.classList.add('listening');
-      
-      renderLipsyncLoop();
+      responseBox.textContent = rawText;
+      processTextToVocalHardware(rawText);
     } catch (err) {
       console.error(err);
-      status.textContent = "Mic/Stereo Permission Denied";
+      status.textContent = "Connection Terminated";
       status.style.color = "#ef4444";
+      micBtn.disabled = false;
     }
   }
 
-  function renderLipsyncLoop() {
-    if (!isListening) return;
+  function processTextToVocalHardware(text) {
+    const sanitizedText = text.replace(/[*#`_\-]/g, '');
+    const speechStream = new SpeechSynthesisUtterance(sanitizedText);
+    
+    speechStream.onstart = () => {
+      status.textContent = "Avatar Voice Active";
+      status.style.color = "#10b981";
+      engageMouthMovement();
+    };
+    
+    speechStream.onend = () => {
+      status.textContent = "System Disconnected";
+      status.style.color = "#94a3b8";
+      micBtn.disabled = false;
+      settleMouthPosition();
+    };
 
-    analyser.getByteFrequencyData(dataArray);
-    
-    let vocalRangeSum = 0;
-    const peakVocalBins = 30; 
-    for(let i = 0; i < peakVocalBins; i++) {
-      vocalRangeSum += dataArray[i];
-    }
-    const averageVolume = vocalRangeSum / peakVocalBins;
-    
-    // Convert audio intensity directly into vertical vertex morphing
-    const intensityScaler = 0.15; 
-    let displacement = averageVolume * intensityScaler;
-    
-    if (displacement > 35) displacement = 35; // Prevents vector structural breaking
-    
-    // Dynamically morph the coordinates of the polygon jaw path
-    const targetY1 = (135 + displacement).toFixed(1);
-    const targetY2 = (145 + displacement * 1.5).toFixed(1);
-    const updatedPath = `M75 130 L100 ${targetY1} L125 130 L100 ${targetY2} Z`;
-    
-    jawMesh.setAttribute('d', updatedPath);
-    
-    requestAnimationFrame(renderLipsyncLoop);
+    speechStream.onerror = () => {
+      status.textContent = "System Disconnected";
+      status.style.color = "#94a3b8";
+      micBtn.disabled = false;
+      settleMouthPosition();
+    };
+
+    window.speechSynthesis.speak(speechStream);
   }
 
-  function stopAudioPipeline() {
-    isListening = false;
-    if (audioContext) audioContext.close();
-    
-    // Reset path back to original structural blueprint values
-    jawMesh.setAttribute('d', 'M75 130 L100 135 L125 130 L100 145 Z');
-    
-    status.textContent = "Audio Engine Offline";
-    status.style.color = "#38bdf8";
-    startBtn.textContent = "Connect Audio Stream";
-    startBtn.classList.remove('listening');
-  }
-
-  startBtn.addEventListener('click', () => {
-    if (!isListening) {
-      initializeAudioPipeline();
-    } else {
-      stopAudioPipeline();
-    }
+  micBtn.addEventListener('click', () => {
+    if (!voiceRecognizer) return;
+    micBtn.disabled = true;
+    voiceRecognizer.start();
   });
 </script>
 
